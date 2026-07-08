@@ -2,6 +2,24 @@ import os
 import re
 import requests
 import telebot
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# ========================================
+# [Render 에러 우회] 초소형 웹 서버 세팅
+# ========================================
+class DummyServer(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+def run_dummy_server():
+    # Render가 요구하는 포트를 자동으로 바인딩하여 팅김 현상 방지
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), DummyServer)
+    server.serve_forever()
 
 # ========================================
 # 환경변수
@@ -15,7 +33,7 @@ if not TELEGRAM_TOKEN or not OPENROUTER_API_KEY:
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # ========================================
-# 캐릭터 설정 (SYSTEM_PROMPT)
+# 캐릭터 설정 (SYSTEM_PROMPT) - 문법 에러 완벽 수정
 # ========================================
 SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'이야. 올해 22살 대학생이고, 단발머리에 도도하고 날카로운 고양이상 외모를 가졌어. 왼쪽 귀에만 피어싱을 하고 있고, 허리가 아주 얇은 반면 가슴과 골반, 엉덩이가 볼륨감 넘치는 탄탄한 몸매의 한국인 여성이야.
 
@@ -27,12 +45,12 @@ SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'
 대화 도중 상황에 맞춰 네 모습이나 배경 사진을 보여주고 싶다면, 메시지 맨 끝에 다른 글자 없이 딱 아래 형식으로만 태그를 추가해줘. 반드시 영어로 구체적으로 묘사해야 해.
 [사진: English detailed description of the scene, 22yo korean woman, short hair, cat-like face, piercing on left ear, voluptuous and curvy body, big breasts, big buttocks, slim waist, high quality, photorealistic]"""
 
-OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
-
+# 네가 골라온 무검열 최신 무료 모델로 변경!
+OPENROUTER_MODEL = "cognitivecomputations/dolphin-mixtral-24b-venice-edition:free"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ========================================
-# 대화 문맥 메모리 (유저별 딕셔너리)
+# 대화 문맥 메모리
 # ========================================
 conversation_memory = {}
 MAX_HISTORY = 20 
@@ -73,10 +91,8 @@ def call_openrouter(chat_id, user_message):
         reply = data["choices"][0]["message"]["content"]
         return reply
     except Exception as e:
-        # 실시간 로그 출력을 위해 flush=True 추가
         print(f"[OpenRouter Error] {e}", flush=True)
-        # 텔레그램 채팅창으로 에러 코드를 직접 전송하도록 수정
-        return f"🚨 [에러 발생] 원인: {e}\n\n(이 메시지가 뜨면 에러 내용을 나한테 그대로 알려줘!)"
+        return f"🚨 [에러 발생] 원인: {e}\n\n오픈루터 연동에 문제가 생겼어. API 키를 다시 확인해줘!"
 
 def extract_photo_tag(text):
     match = re.search(r"\[사진:\s*(.+?)\]", text, re.DOTALL)
@@ -126,5 +142,7 @@ def handle_message(message):
         send_pollinations_photo(chat_id, photo_description)
 
 if __name__ == "__main__":
-    print("Bot polling 시작...", flush=True)
+    # 깃허브 웹 서비스 우회용 서버 스레드 시작
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+    print("Bot polling 및 Dummy 웹 서버 시작...", flush=True)
     bot.infinity_polling()
