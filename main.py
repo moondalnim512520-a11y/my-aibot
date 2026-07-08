@@ -47,7 +47,7 @@ def get_ai_response(chat_id, user_message):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "meta-llama/llama-3-8b-instruct:free", # 100% 무료 모델로 안전하게 세팅
+        "model": "meta-llama/llama-3-8b-instruct:free",
         "messages": chat_histories[chat_id],
         "temperature": 0.85
     }
@@ -67,7 +67,6 @@ def handle_message(message):
     
     ai_response = get_ai_response(chat_id, user_text)
     
-    # AI가 사진 태그를 보냈는지 감지
     if "[사진:" in ai_response:
         try:
             parts = ai_response.split("[사진:")
@@ -77,7 +76,6 @@ def handle_message(message):
             if text_content:
                 bot.send_message(chat_id, text_content)
             
-            # 무료 이미지 생성 API 연동 (Pollinations AI)
             encoded_prompt = urllib.parse.quote(photo_prompt)
             image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=512&height=768&nologo=true"
             
@@ -87,12 +85,11 @@ def handle_message(message):
     else:
         bot.send_message(chat_id, ai_response)
 
-def run_flask():
+if __name__ == "__main__":
+    # 1. 텔레그램 봇을 백그라운드 스레드에서 구동
+    bot_thread = threading.Thread(target=bot.infinity_polling, daemon=True)
+    bot_thread.start()
+    
+    # 2. Flask 서버를 메인 스레드에서 구동 (Render가 포트를 즉시 감지할 수 있도록 블로킹)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-if __name__ == "__main__":
-    # 서버 생존 확인용 Flask 구동
-    threading.Thread(target=run_flask).start()
-    # 텔레그램 봇 무한 대기
-    bot.infinity_polling()
