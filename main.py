@@ -27,7 +27,8 @@ SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'
 대화 도중 상황에 맞춰 네 모습이나 배경 사진을 보여주고 싶다면, 메시지 맨 끝에 다른 글자 없이 딱 아래 형식으로만 태그를 추가해줘. 반드시 영어로 구체적으로 묘사해야 해.
 [사진: English detailed description of the scene, 22yo korean woman, short hair, cat-like face, piercing on left ear, voluptuous and curvy body, big breasts, big buttocks, slim waist, high quality, photorealistic]"""
 
-OPENROUTER_MODEL = "meta-llama/llama-3-8b-instruct:free"
+OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ========================================
