@@ -45,7 +45,7 @@ SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'
 [사진: English detailed description of the scene, 22yo korean woman, short hair, cat-like face, piercing on left ear, voluptuous and curvy body, big breasts, big buttocks, slim waist, high quality, photorealistic]"""
 
 # [Tip] 만약 Venice 모델이 계속 에러 나면 이 줄을 "meta-llama/llama-3.1-8b-instruct:free" 로 바꿔봐!
-OPENROUTER_MODEL = "cognitivecomputations/dolphin-mistral-24b-venice-edition:free"
+OPENROUTER_MODEL = "gryphe/mythomax-l2-13b:free"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # ========================================
