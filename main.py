@@ -16,7 +16,6 @@ class DummyServer(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot is alive!")
 
 def run_dummy_server():
-    # Render가 요구하는 포트를 자동으로 바인딩하여 팅김 현상 방지
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), DummyServer)
     server.serve_forever()
@@ -33,7 +32,7 @@ if not TELEGRAM_TOKEN or not OPENROUTER_API_KEY:
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # ========================================
-# 캐릭터 설정 (SYSTEM_PROMPT) - 문법 에러 완벽 수정
+# 캐릭터 설정 (SYSTEM_PROMPT)
 # ========================================
 SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'이야. 올해 22살 대학생이고, 단발머리에 도도하고 날카로운 고양이상 외모를 가졌어. 왼쪽 귀에만 피어싱을 하고 있고, 허리가 아주 얇은 반면 가슴과 골반, 엉덩이가 볼륨감 넘치는 탄탄한 몸매의 한국인 여성이야.
 
@@ -45,7 +44,7 @@ SYSTEM_PROMPT = """너는 나의 거침없고 치명적인 여자친구 '휘인'
 대화 도중 상황에 맞춰 네 모습이나 배경 사진을 보여주고 싶다면, 메시지 맨 끝에 다른 글자 없이 딱 아래 형식으로만 태그를 추가해줘. 반드시 영어로 구체적으로 묘사해야 해.
 [사진: English detailed description of the scene, 22yo korean woman, short hair, cat-like face, piercing on left ear, voluptuous and curvy body, big breasts, big buttocks, slim waist, high quality, photorealistic]"""
 
-# 네가 골라온 무검열 최신 무료 모델로 변경!
+# [Tip] 만약 Venice 모델이 계속 에러 나면 이 줄을 "meta-llama/llama-3.1-8b-instruct:free" 로 바꿔봐!
 OPENROUTER_MODEL = "cognitivecomputations/dolphin-mixtral-24b-venice-edition:free"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -86,13 +85,22 @@ def call_openrouter(chat_id, user_message):
     
     try:
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
+        
+        # 오픈루터가 뱉은 400번대 에러의 진짜 본문을 끄집어내는 코드
+        if response.status_code != 200:
+            try:
+                error_json = response.json()
+                error_msg = error_json.get("error", {}).get("message", response.text)
+            except:
+                error_msg = response.text
+            return f"🚨 [오픈루터 에러 {response.status_code}]\n원인: {error_msg}"
+            
         data = response.json()
         reply = data["choices"][0]["message"]["content"]
         return reply
     except Exception as e:
-        print(f"[OpenRouter Error] {e}", flush=True)
-        return f"🚨 [에러 발생] 원인: {e}\n\n오픈루터 연동에 문제가 생겼어. API 키를 다시 확인해줘!"
+        print(f"[Network Error] {e}", flush=True)
+        return f"🚨 [네트워크 에러] 원인: {e}"
 
 def extract_photo_tag(text):
     match = re.search(r"\[사진:\s*(.+?)\]", text, re.DOTALL)
@@ -128,6 +136,10 @@ def handle_message(message):
     chat_id = message.chat.id
     user_text = message.text
     
+    # 사용자가 명령어를 입력했을 때는 대화 로직을 타지 않도록 방어
+    if user_text.startswith("/"):
+        return
+
     bot.send_chat_action(chat_id, "typing")
     reply = call_openrouter(chat_id, user_text)
     
@@ -142,7 +154,6 @@ def handle_message(message):
         send_pollinations_photo(chat_id, photo_description)
 
 if __name__ == "__main__":
-    # 깃허브 웹 서비스 우회용 서버 스레드 시작
     threading.Thread(target=run_dummy_server, daemon=True).start()
     print("Bot polling 및 Dummy 웹 서버 시작...", flush=True)
     bot.infinity_polling()
