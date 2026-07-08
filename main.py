@@ -53,7 +53,6 @@ def call_openrouter(chat_id, user_message):
     messages.extend(history)
     messages.append({"role": "user", "content": user_message})
 
-    # OpenRouter 안정성을 위한 에러 방지 헤더 추가
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -73,8 +72,10 @@ def call_openrouter(chat_id, user_message):
         reply = data["choices"][0]["message"]["content"]
         return reply
     except Exception as e:
-        print(f"[OpenRouter Error] {e}")
-        return "지금 서버 연결에 잠깐 문제가 있나 봐.. 자기야, 잠시 후에 다시 말 걸어줄래?"
+        # 실시간 로그 출력을 위해 flush=True 추가
+        print(f"[OpenRouter Error] {e}", flush=True)
+        # 텔레그램 채팅창으로 에러 코드를 직접 전송하도록 수정
+        return f"🚨 [에러 발생] 원인: {e}\n\n(이 메시지가 뜨면 에러 내용을 나한테 그대로 알려줘!)"
 
 def extract_photo_tag(text):
     match = re.search(r"\[사진:\s*(.+?)\]", text, re.DOTALL)
@@ -90,7 +91,7 @@ def send_pollinations_photo(chat_id, description):
         image_url = f"https://image.pollinations.ai/prompt/{encoded}"
         bot.send_photo(chat_id, image_url)
     except Exception as e:
-        print(f"[Pollinations Error] {e}")
+        print(f"[Pollinations Error] {e}", flush=True)
         bot.send_message(chat_id, "사진을 불러오지 못했어 ㅠㅠ")
 
 @bot.message_handler(commands=["start"])
@@ -124,5 +125,5 @@ def handle_message(message):
         send_pollinations_photo(chat_id, photo_description)
 
 if __name__ == "__main__":
-    print("Bot polling 시작...")
+    print("Bot polling 시작...", flush=True)
     bot.infinity_polling()
